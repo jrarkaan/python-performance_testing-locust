@@ -4,6 +4,7 @@ import time
 from locust import User, events, TaskSet, task, constant
 import redis
 import gevent.monkey
+import inspect
 
 gevent.monkey.patch_all()
 
@@ -31,36 +32,61 @@ class RedisClient(object):
         """Function to Test GET operation on Redis"""
         result = None
         start_time = time.time()
+        previous_frame = inspect.currentframe().f_back
+        _, _, task_name, _, _ = inspect.getframeinfo(previous_frame)
+
         try:
             result = self.rc.get(key)
             if not result:
                 result = ''
         except Exception as e:
             total_time = int((time.time() - start_time) * 1000)
-            events.request_failure.fire(request_type=command, name=key, response_time=total_time, exception=e)
+            events.request.fire(
+                request_type="grpc",
+                name=task_name,
+                response_time=total_time,
+                response_length=0,
+                exception=e
+            )
         else:
             total_time = int((time.time() - start_time) * 1000)
             length = len(result)
-            events.request_success.fire(request_type=command, name=key, response_time=total_time,response_length=length)
+            events.request.fire(
+                request_type="grpc",
+                name=task_name,
+                response_time=total_time,
+                response_length=0,
+            )
         return result
 
     def write(self, key, value, command='SET'):
         """Function to Test SET operation on Redis"""
         result = None
         start_time = time.time()
+        previous_frame = inspect.currentframe().f_back
+        _, _, task_name, _, _ = inspect.getframeinfo(previous_frame)
         try:
             result = self.rc.set(key, value)
             if not result:
                 result = ''
         except Exception as e:
             total_time = int((time.time() - start_time) * 1000)
-            events.request_failure.fire(
-                request_type=command, name=key, response_time=total_time, exception=e)
+            events.request.fire(
+                request_type="grpc",
+                name=task_name,
+                response_time=total_time,
+                response_length=0,
+                exception=e
+            )
         else:
             total_time = int((time.time() - start_time) * 1000)
             length = 1
-            events.request_success.fire(
-                request_type=command, name=key, response_time=total_time, response_length=length)
+            events.request.fire(
+                request_type="grpc",
+                name=task_name,
+                response_time=total_time,
+                response_length=0,
+            )
         return result
 
 
